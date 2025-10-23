@@ -27,7 +27,8 @@ class MedicationApp extends StatelessWidget {
           titleLarge: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
         ),
       ),
-      home: const MedicationHomePage(),
+      // show login first
+      home: const LoginPage(),
     );
   }
 }
@@ -64,6 +65,19 @@ class _MedicationHomePageState extends State<MedicationHomePage> {
       appBar: AppBar(
         title: const Text("Today's Medications"),
         centerTitle: true,
+        actions: [
+          IconButton(
+            tooltip: 'Logout',
+            icon: const Icon(Icons.logout),
+            onPressed: () {
+              // replace with LoginPage when logging out
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const LoginPage()),
+              );
+            },
+          ),
+        ],
       ),
       body: ListView.builder(
         itemCount: _medications.length,
@@ -164,6 +178,113 @@ class _AddMedicationPageState extends State<AddMedicationPage> {
                 ),
                 child: const Text('Save', style: TextStyle(fontSize: 22, color: Colors.white)),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// New login page added below
+class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
+
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _showError = false;
+  bool _isLoggingIn = false;
+
+  void _attemptLogin() async {
+    setState(() {
+      _showError = false;
+    });
+
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    if (email.isEmpty || password.isEmpty) {
+      setState(() {
+        _showError = true;
+      });
+      return;
+    }
+
+    // simple simulated login delay
+    setState(() {
+      _isLoggingIn = true;
+    });
+    await Future.delayed(const Duration(milliseconds: 800));
+    setState(() {
+      _isLoggingIn = false;
+    });
+
+    // For demo accept any non-empty credentials. Replace with real auth as needed.
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const MedicationHomePage()),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Sign in')),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            const SizedBox(height: 24),
+            TextField(
+              controller: _emailController,
+              decoration: const InputDecoration(
+                labelText: 'Email',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.emailAddress,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _passwordController,
+              decoration: const InputDecoration(
+                labelText: 'Password',
+                border: OutlineInputBorder(),
+              ),
+              obscureText: true,
+            ),
+            if (_showError)
+              const Padding(
+                padding: EdgeInsets.only(top: 12),
+                child: Text('Please enter email and password', style: TextStyle(color: Colors.red)),
+              ),
+            const Spacer(),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _isLoggingIn ? null : _attemptLogin,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: _isLoggingIn
+                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : const Text('Login', style: TextStyle(fontSize: 18)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: () {
+                // optional: go directly to app for demo purposes
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const MedicationHomePage()),
+                );
+              },
+              child: const Text('Continue without signing in', style: TextStyle(color: Colors.blue)),
             ),
           ],
         ),
