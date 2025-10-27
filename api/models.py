@@ -1,64 +1,52 @@
-# models.py
-from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
+import uuid
+import json
 
 db = SQLAlchemy()
 
 
 class User(db.Model):
     __tablename__ = "users"
+    id = db.Column(db.String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    email = db.Column(db.String, unique=True, nullable=False)
+    name = db.Column(db.String, nullable=False)
+    age = db.Column(db.Integer, nullable=False)
+    password = db.Column(db.String, nullable=False)
+    is_caregiver = db.Column(db.Boolean, default=False)
 
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    password = db.Column(db.String(128), nullable=False)  # hash in real use
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-    reminders = db.relationship("Reminder", backref="user", lazy=True)
-    caregivers = db.relationship("Caregiver", backref="user", lazy=True)
+    caregiver_id = db.Column(db.String, db.ForeignKey("users.id"), nullable=True)
+    medications = db.relationship("Medication", backref="user", lazy=True)
 
     def to_dict(self):
         return {
             "id": self.id,
-            "name": self.name,
             "email": self.email,
-            "created_at": self.created_at.isoformat(),
+            "name": self.name,
+            "age": self.age,
+            "isCaregiver": self.is_caregiver,
+            "caregiverId": self.caregiver_id
         }
 
 
-class Caregiver(db.Model):
-    __tablename__ = "caregivers"
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+class Medication(db.Model):
+    __tablename__ = "medications"
+    id = db.Column(db.String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = db.Column(db.String, db.ForeignKey("users.id"), nullable=False)
+    name = db.Column(db.String, nullable=False)
+    amount = db.Column(db.Float, nullable=False)
+    unit = db.Column(db.String, nullable=False)
+    time = db.Column(db.String, nullable=False)  # "08:00 AM"
+    days = db.Column(db.String, nullable=True)   # comma-separated weekdays
+    taken = db.Column(db.Boolean, default=False)
 
     def to_dict(self):
         return {
             "id": self.id,
+            "userId": self.user_id,
             "name": self.name,
-            "email": self.email,
-            "user_id": self.user_id,
-        }
-
-
-class Reminder(db.Model):
-    __tablename__ = "reminders"
-
-    id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(200), nullable=False)
-    description = db.Column(db.String(500))
-    time = db.Column(db.DateTime, nullable=False)
-    is_completed = db.Column(db.Boolean, default=False)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "title": self.title,
-            "description": self.description,
-            "time": self.time.isoformat(),
-            "is_completed": self.is_completed,
-            "user_id": self.user_id,
+            "amount": self.amount,
+            "unit": self.unit,
+            "time": self.time,
+            "days": json.loads(self.days) if self.days else [],
+            "taken": self.taken
         }

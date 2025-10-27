@@ -1,103 +1,148 @@
-# app.py
-from flask import Flask, jsonify, request
+from flask import Flask, request, jsonify
 from flask_cors import CORS
-from models import db, User, Caregiver, Reminder
-from datetime import datetime
+from models import db, User, Medication
+import json
 
 app = Flask(__name__)
-CORS(app)  # allow frontend to call backend easily
-
-# Use SQLite for development
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///seniorsched.db"
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///med_scheduler.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
-
+CORS(app)
 
 with app.app_context():
     db.create_all()
 
+# ----------------- User APIs -----------------
+@app.route("/signup", methods=["POST"])
+def signup():
+    data = request.get_json()
+    email = data.get("email")
+    password = data.get("password")
+    name = data.get("name")
+    age = data.get("age", 0)
+    is_caregiver = data.get("isCaregiver", False)
 
-# ---------- USER ROUTES ----------
-@app.route("/users", methods=["POST"])
-def create_user():
-    data = request.json
-    new_user = User(
+    if not email or not password or not name:
+        return jsonify({"error": "Missing required fields"}), 400
+
+    if User.query.filter_by(email=email).first():
+        return jsonify({"error": "User with this email already exists"}), 400
+
+    user = User(
+        email=email,
+        password=password,
+        name=name,
+        age=age,
+        is_caregiver=is_caregiver
+    )
+    db.session.add(user)
+    db.session.commit()
+    return jsonify(user.to_dict()), 201
+
+
+@app.route("/login", methods=["POST"])
+def login():
+    data = request.get_json()
+    print(data)
+    print([u.to_dict() for u in User.query.all()])
+    email = data.get("email")
+    password = data.get("password")
+    is_caregiver = data.get("isCaregiver", False)
+
+    if not email or not password:
+        return jsonify({"error": "Missing email or password"}), 400
+
+    user = User.query.filter_by(email=email, password=password, is_caregiver=is_caregiver).first()
+    if not user:
+        return jsonify({"error": "Invalid credentials"}), 401
+
+    return jsonify(user.to_dict()), 200
+
+
+@app.route("/caregivers/<caregiver_id>/users", methods=["GET"])
+def get_caregiver_users(caregiver_id):
+    users = User.query.filter_by(caregiver_id=caregiver_id).all()
+    return jsonify([u.to_dict() for u in users]), 200
+
+# Assign existing user to a caregiver
+@app.route("/caregivers/<caregiver_id>/users", methods=["POST"])
+def add_caregiver_user(caregiver_id):
+    data = request.get_json()
+    email = data.get("email")
+
+    if not email:
+        return jsonify({"error": "Missing email field"}), 400
+
+    # Find existing user
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        return jsonify({"error": "User does not exist"}), 404
+
+    # Assign caregiver
+    user.caregiver_id = caregiver_id
+    db.session.commit()
+
+    return jsonify({
+        "message": "User successfully assigned to caregiver",
+        "user": user.to_dict()
+    }), 201
+
+
+
+# ----------------- Medication APIs -----------------
+@app.route("/medications/<user_id>", methods=["GET"])
+def get_medications(user_id):
+    print(user_id)
+    meds = Medication.query.filter_by(user_id=user_id).all()
+    print([m.to_dict() for m in meds])
+    return jsonify([m.to_dict() for m in meds]), 200
+
+
+@app.route("/medications/<user_id>", methods=["POST"])
+def add_medication(user_id):
+    data = request.get_json()
+    print(data)
+
+    # basic validation
+    required_fields = ["name", "amount", "unit", "time"]
+    if not all(field in data and data[field] for field in required_fields):
+        return jsonify({"error": "Missing required fields"}), 400
+
+    med = Medication(
+        user_id=user_id,
         name=data["name"],
-        email=data["email"],
-        password=data["password"],  # In production, hash this!
+        amount=data["amount"],
+        unit=data["unit"],
+        time=data["time"],
+        days=json.dumps(data.get("days", [])),
+        taken=False
     )
-    db.session.add(new_user)
+
+    db.session.add(med)
     db.session.commit()
-    return jsonify(new_user.to_dict()), 201
+    return jsonify(med.to_dict()), 201
 
 
-@app.route("/users", methods=["GET"])
-def list_users():
-    users = User.query.all()
-    return jsonify([u.to_dict() for u in users])
+@app.route("/medications/<user_id>/<med_id>", methods=["PUT"])
+def update_medication(user_id, med_id):
+    med = Medication.query.filter_by(user_id=user_id, id=med_id).first()
+    if not med:
+        return jsonify({"error": "Medication not found"}), 404
 
+    data = request.get_json()
 
-# ---------- CAREGIVER ROUTES ----------
-@app.route("/caregivers", methods=["POST"])
-def add_caregiver():
-    data = request.json
-    caregiver = Caregiver(
-        name=data["name"],
-        email=data["email"],
-        user_id=data["user_id"],
-    )
-    db.session.add(caregiver)
+    # Update only fields provided in request
+    med.name = data.get("name", med.name)
+    med.amount = data.get("amount", med.amount)
+    med.unit = data.get("unit", med.unit)
+    med.time = data.get("time", med.time)
+    med.days = data.get("days", med.days)
+    med.taken = data.get("taken", med.taken)
+
     db.session.commit()
-    return jsonify(caregiver.to_dict()), 201
-
-
-@app.route("/caregivers/<int:user_id>", methods=["GET"])
-def get_caregivers(user_id):
-    caregivers = Caregiver.query.filter_by(user_id=user_id).all()
-    return jsonify([c.to_dict() for c in caregivers])
-
-
-# ---------- REMINDER ROUTES ----------
-@app.route("/reminders", methods=["POST"])
-def create_reminder():
-    data = request.json
-    reminder = Reminder(
-        title=data["title"],
-        description=data.get("description", ""),
-        time=datetime.fromisoformat(data["time"]),
-        user_id=data["user_id"],
-    )
-    db.session.add(reminder)
-    db.session.commit()
-    return jsonify(reminder.to_dict()), 201
-
-
-@app.route("/reminders/<int:user_id>", methods=["GET"])
-def get_reminders(user_id):
-    reminders = Reminder.query.filter_by(user_id=user_id).all()
-    return jsonify([r.to_dict() for r in reminders])
-
-
-@app.route("/reminders/<int:reminder_id>", methods=["PUT"])
-def update_reminder(reminder_id):
-    reminder = Reminder.query.get_or_404(reminder_id)
-    data = request.json
-    reminder.title = data.get("title", reminder.title)
-    reminder.description = data.get("description", reminder.description)
-    reminder.time = datetime.fromisoformat(data.get("time", reminder.time.isoformat()))
-    reminder.is_completed = data.get("is_completed", reminder.is_completed)
-    db.session.commit()
-    return jsonify(reminder.to_dict())
-
-
-@app.route("/reminders/<int:reminder_id>", methods=["DELETE"])
-def delete_reminder(reminder_id):
-    reminder = Reminder.query.get_or_404(reminder_id)
-    db.session.delete(reminder)
-    db.session.commit()
-    return jsonify({"message": "Reminder deleted"})
+    return jsonify(med.to_dict()), 200
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, host="0.0.0.0", port=8000)

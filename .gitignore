@@ -47,3 +47,4 @@ app.*.map.json
 api/env
 api/instance
 api/__pycache__
+ui/build/
