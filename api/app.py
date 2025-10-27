@@ -1,107 +1,103 @@
-#----------------------------------------------------------------------------#
-# Imports
-#----------------------------------------------------------------------------#
-
-from flask import Flask, render_template, request
-# from flask.ext.sqlalchemy import SQLAlchemy
-import logging
-from logging import Formatter, FileHandler
-from forms import *
-import os
-
-#----------------------------------------------------------------------------#
-# App Config.
-#----------------------------------------------------------------------------#
+# app.py
+from flask import Flask, jsonify, request
+from flask_cors import CORS
+from models import db, User, Caregiver, Reminder
+from datetime import datetime
 
 app = Flask(__name__)
-app.config.from_object('config')
-#db = SQLAlchemy(app)
+CORS(app)  # allow frontend to call backend easily
 
-# Automatically tear down SQLAlchemy.
-'''
-@app.teardown_request
-def shutdown_session(exception=None):
-    db_session.remove()
-'''
+# Use SQLite for development
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///seniorsched.db"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-# Login required decorator.
-'''
-def login_required(test):
-    @wraps(test)
-    def wrap(*args, **kwargs):
-        if 'logged_in' in session:
-            return test(*args, **kwargs)
-        else:
-            flash('You need to login first.')
-            return redirect(url_for('login'))
-    return wrap
-'''
-#----------------------------------------------------------------------------#
-# Controllers.
-#----------------------------------------------------------------------------#
+db.init_app(app)
 
 
-@app.route('/')
-def home():
-    return render_template('pages/placeholder.home.html')
+with app.app_context():
+    db.create_all()
 
 
-@app.route('/about')
-def about():
-    return render_template('pages/placeholder.about.html')
-
-
-@app.route('/login')
-def login():
-    form = LoginForm(request.form)
-    return render_template('forms/login.html', form=form)
-
-
-@app.route('/register')
-def register():
-    form = RegisterForm(request.form)
-    return render_template('forms/register.html', form=form)
-
-
-@app.route('/forgot')
-def forgot():
-    form = ForgotForm(request.form)
-    return render_template('forms/forgot.html', form=form)
-
-# Error handlers.
-
-
-@app.errorhandler(500)
-def internal_error(error):
-    #db_session.rollback()
-    return render_template('errors/500.html'), 500
-
-
-@app.errorhandler(404)
-def not_found_error(error):
-    return render_template('errors/404.html'), 404
-
-if not app.debug:
-    file_handler = FileHandler('error.log')
-    file_handler.setFormatter(
-        Formatter('%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]')
+# ---------- USER ROUTES ----------
+@app.route("/users", methods=["POST"])
+def create_user():
+    data = request.json
+    new_user = User(
+        name=data["name"],
+        email=data["email"],
+        password=data["password"],  # In production, hash this!
     )
-    app.logger.setLevel(logging.INFO)
-    file_handler.setLevel(logging.INFO)
-    app.logger.addHandler(file_handler)
-    app.logger.info('errors')
+    db.session.add(new_user)
+    db.session.commit()
+    return jsonify(new_user.to_dict()), 201
 
-#----------------------------------------------------------------------------#
-# Launch.
-#----------------------------------------------------------------------------#
 
-# Default port:
-if __name__ == '__main__':
-    app.run()
+@app.route("/users", methods=["GET"])
+def list_users():
+    users = User.query.all()
+    return jsonify([u.to_dict() for u in users])
 
-# Or specify port manually:
-'''
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
-'''
+
+# ---------- CAREGIVER ROUTES ----------
+@app.route("/caregivers", methods=["POST"])
+def add_caregiver():
+    data = request.json
+    caregiver = Caregiver(
+        name=data["name"],
+        email=data["email"],
+        user_id=data["user_id"],
+    )
+    db.session.add(caregiver)
+    db.session.commit()
+    return jsonify(caregiver.to_dict()), 201
+
+
+@app.route("/caregivers/<int:user_id>", methods=["GET"])
+def get_caregivers(user_id):
+    caregivers = Caregiver.query.filter_by(user_id=user_id).all()
+    return jsonify([c.to_dict() for c in caregivers])
+
+
+# ---------- REMINDER ROUTES ----------
+@app.route("/reminders", methods=["POST"])
+def create_reminder():
+    data = request.json
+    reminder = Reminder(
+        title=data["title"],
+        description=data.get("description", ""),
+        time=datetime.fromisoformat(data["time"]),
+        user_id=data["user_id"],
+    )
+    db.session.add(reminder)
+    db.session.commit()
+    return jsonify(reminder.to_dict()), 201
+
+
+@app.route("/reminders/<int:user_id>", methods=["GET"])
+def get_reminders(user_id):
+    reminders = Reminder.query.filter_by(user_id=user_id).all()
+    return jsonify([r.to_dict() for r in reminders])
+
+
+@app.route("/reminders/<int:reminder_id>", methods=["PUT"])
+def update_reminder(reminder_id):
+    reminder = Reminder.query.get_or_404(reminder_id)
+    data = request.json
+    reminder.title = data.get("title", reminder.title)
+    reminder.description = data.get("description", reminder.description)
+    reminder.time = datetime.fromisoformat(data.get("time", reminder.time.isoformat()))
+    reminder.is_completed = data.get("is_completed", reminder.is_completed)
+    db.session.commit()
+    return jsonify(reminder.to_dict())
+
+
+@app.route("/reminders/<int:reminder_id>", methods=["DELETE"])
+def delete_reminder(reminder_id):
+    reminder = Reminder.query.get_or_404(reminder_id)
+    db.session.delete(reminder)
+    db.session.commit()
+    return jsonify({"message": "Reminder deleted"})
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
