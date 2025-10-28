@@ -78,14 +78,10 @@ class _UserMedicationListPageState extends State<UserMedicationListPage> {
                 return ListTile(
                   title: Text('${med.name} - ${med.amount} ${med.unit} at ${med.time}'),
                   subtitle: Text('Days: ${med.days.join(", ")}'),
-                  trailing: ElevatedButton(
-                    onPressed: med.taken
-                        ? null
-                        : () async {
-                            await apiService.markTaken(widget.selectedUserId, med.id);
-                            _loadMedications();
-                          },
-                    child: Text(med.taken ? '✅ Taken' : 'Done'),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.edit),
+                    tooltip: 'Edit Medication',
+                    onPressed: () => _addOrEditMedication(existingMed: med),
                   ),
                   onTap: () => _addOrEditMedication(existingMed: med),
                 );

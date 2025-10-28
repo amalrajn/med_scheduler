@@ -137,12 +137,21 @@ def update_medication(user_id, med_id):
     med.amount = data.get("amount", med.amount)
     med.unit = data.get("unit", med.unit)
     med.time = data.get("time", med.time)
-    med.days = data.get("days", med.days)
+    med.days = json.dumps(data.get("days", []))
     med.taken = data.get("taken", med.taken)
 
     db.session.commit()
     return jsonify(med.to_dict()), 200
 
+@app.route("/medications/<user_id>/<med_id>/taken", methods=["POST"])
+def mark_med_taken(user_id, med_id):
+    med = Medication.query.get(med_id)
+    if not med:
+        return {"error": "Medication not found"}, 404
+
+    med.taken = True
+    db.session.commit()
+    return jsonify(med.to_dict()), 200
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=8000)

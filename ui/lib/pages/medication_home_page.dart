@@ -73,7 +73,7 @@ class _MedicationHomePageState extends State<MedicationHomePage> {
                 return Card(
                   margin: const EdgeInsets.all(8),
                   child: ListTile(
-                    title: Text('${med.name} - ${med.time}'),
+                  title: Text('${med.name} - ${med.amount} ${med.unit} at ${med.time}'),
                     trailing: widget.isCaregiverView
                         ? IconButton(
                             icon: const Icon(Icons.edit),

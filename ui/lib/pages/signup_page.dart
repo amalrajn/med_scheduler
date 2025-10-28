@@ -25,8 +25,8 @@ class _SignupPageState extends State<SignupPage> {
     try {
       final newUser = await apiService.signup(
         _emailController.text,
-        _passwordController.text,
         _nameController.text,
+        _passwordController.text,
         int.tryParse(_ageController.text) ?? 0,
         _isCaregiver,
       );
