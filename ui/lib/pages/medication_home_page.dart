@@ -74,15 +74,16 @@ class _MedicationHomePageState extends State<MedicationHomePage> {
                   margin: const EdgeInsets.all(8),
                   child: ListTile(
                   title: Text('${med.name} - ${med.amount} ${med.unit} at ${med.time}'),
-                    trailing: widget.isCaregiverView
-                        ? IconButton(
-                            icon: const Icon(Icons.edit),
-                            onPressed: () => _addOrEditMedication(med),
-                          )
-                        : ElevatedButton(
-                            onPressed: med.taken ? null : () => _markTaken(med),
-                            child: Text(med.taken ? "✅ Taken" : "Done"),
-                          ),
+                  subtitle: Text('Days: ${med.days.join(", ")}'),
+                  trailing: widget.isCaregiverView
+                      ? IconButton(
+                          icon: const Icon(Icons.edit),
+                          onPressed: () => _addOrEditMedication(med),
+                        )
+                      : ElevatedButton(
+                          onPressed: med.taken ? null : () => _markTaken(med),
+                          child: Text(med.taken ? "✅ Taken" : "Done"),
+                        ),
                   ),
                 );
               },

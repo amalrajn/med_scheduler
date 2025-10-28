@@ -23,6 +23,7 @@ class _AddMedicationPageState extends State<AddMedicationPage> {
   String selectedUnit = 'mg';
   List<String> units = ['mg', 'ml', 'pills', 'drops'];
   List<String> selectedDays = [];
+  List<String> weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   int selectedHour = 8;
   int selectedMinute = 0;
@@ -151,6 +152,30 @@ class _AddMedicationPageState extends State<AddMedicationPage> {
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 20),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Select Days', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+            Wrap(
+              spacing: 8.0,
+              children: weekdays.map((day) {
+                final isSelected = selectedDays.contains(day);
+                return ChoiceChip(
+                  label: Text(day),
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    setState(() {
+                      if (selected) {
+                        selectedDays.add(day);
+                      } else {
+                        selectedDays.remove(day);
+                      }
+                    });
+                  },
+                );
+              }).toList(),
             ),
             const SizedBox(height: 20),
             ElevatedButton(
