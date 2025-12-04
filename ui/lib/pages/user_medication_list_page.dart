@@ -53,7 +53,7 @@ class _UserMedicationListPageState extends State<UserMedicationListPage> {
     if (result != null) {
       try {
         if (existingMed == null) {
-          await apiService.addMedication(widget.selectedUserId, result);
+          //await apiService.addMedication(widget.selectedUserId, result);
         } else {
           await apiService.updateMedication(widget.selectedUserId, existingMed.id, result);
         }
