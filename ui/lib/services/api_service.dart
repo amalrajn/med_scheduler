@@ -68,6 +68,15 @@ class ApiService {
     }
   }
 
+  Future<void> deleteMedication(String userId, String medicationId) async {
+    final res = await http.delete(
+      Uri.parse('$baseUrl/medications/$userId/$medicationId'),
+    );
+    if (res.statusCode != 204) { // 204 No Content is the standard success code for DELETE
+      throw Exception('Failed to delete medication');
+    }
+  }
+
   // ---------------- Login ----------------
   Future<User> login(String email, String password, bool isCaregiver) async {
     final res = await http.post(

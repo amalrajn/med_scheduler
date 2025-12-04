@@ -143,6 +143,16 @@ def update_medication(user_id, med_id):
     db.session.commit()
     return jsonify(med.to_dict()), 200
 
+@app.route("/medications/<user_id>/<med_id>", methods=["DELETE"])
+def delete_medication(user_id, med_id):
+    med = Medication.query.filter_by(user_id=user_id, id=med_id).first()
+    if not med:
+        return jsonify({"error": "Medication not found"}), 404
+
+    db.session.delete(med)
+    db.session.commit()
+    return '', 204 # Standard successful deletion response (No Content)
+
 @app.route("/medications/<user_id>/<med_id>/taken", methods=["POST"])
 def mark_med_taken(user_id, med_id):
     med = Medication.query.get(med_id)

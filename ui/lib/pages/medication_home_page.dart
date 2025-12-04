@@ -5,9 +5,8 @@ import 'add_medication_page.dart';
 
 class MedicationHomePage extends StatefulWidget {
   final String userId;
-  final bool isCaregiverView;
 
-  const MedicationHomePage({super.key, required this.userId, this.isCaregiverView = false});
+  const MedicationHomePage({super.key, required this.userId});
 
   @override
   State<MedicationHomePage> createState() => _MedicationHomePageState();
@@ -36,21 +35,6 @@ class _MedicationHomePageState extends State<MedicationHomePage> {
     }
   }
 
-  void _addOrEditMedication([Medication? med]) async {
-    final updated = await Navigator.push<Medication>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => AddMedicationPage(
-          userId: widget.userId,
-          existingMed: med,
-        ),
-      ),
-    );
-    if (updated != null) {
-      await _loadMedications();
-    }
-  }
-
   Future<void> _markTaken(Medication med) async {
     try {
       await apiService.markTaken(widget.userId, med.id);
@@ -63,7 +47,7 @@ class _MedicationHomePageState extends State<MedicationHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.isCaregiverView ? 'Patient Medications' : "My Medications")),
+      appBar: AppBar(title: Text("My Medications")),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : ListView.builder(
@@ -75,26 +59,14 @@ class _MedicationHomePageState extends State<MedicationHomePage> {
                   child: ListTile(
                   title: Text('${med.name} - ${med.amount} ${med.unit} at ${med.time}'),
                   subtitle: Text('Days: ${med.days.join(", ")}'),
-                  trailing: widget.isCaregiverView
-                      ? IconButton(
-                          icon: const Icon(Icons.edit),
-                          onPressed: () => _addOrEditMedication(med),
-                        )
-                      : ElevatedButton(
-                          onPressed: med.taken ? null : () => _markTaken(med),
-                          child: Text(med.taken ? "✅ Taken" : "Done"),
-                        ),
+                  trailing: ElevatedButton(
+                      onPressed: med.taken ? null : () => _markTaken(med),
+                      child: Text(med.taken ? "✅ Taken" : "Done"),
+                    ),
                   ),
                 );
               },
             ),
-      floatingActionButton: widget.isCaregiverView
-          ? FloatingActionButton(
-              onPressed: () => _addOrEditMedication(),
-              child: const Icon(Icons.add),
-              tooltip: 'Add Medication',
-            )
-          : null,
     );
   }
 }

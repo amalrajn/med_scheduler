@@ -65,6 +65,39 @@ class _UserMedicationListPageState extends State<UserMedicationListPage> {
     }
   }
 
+   Future<void> _deleteMedication(Medication med) async {
+    final bool confirm = await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Deletion'),
+        content: Text('Are you sure you want to delete ${med.name}?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
+        ],
+      ),
+    ) ?? false;
+
+    if (confirm) {
+      try {
+        await apiService.deleteMedication(widget.selectedUserId, med.id);
+        await _loadMedications();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('${med.name} deleted successfully.'), backgroundColor: Colors.orange),
+          );
+        }
+      } catch (e) {
+        debugPrint('Error deleting medication: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to delete medication.'), backgroundColor: Colors.red),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -78,11 +111,21 @@ class _UserMedicationListPageState extends State<UserMedicationListPage> {
                 return ListTile(
                   title: Text('${med.name} - ${med.amount} ${med.unit} at ${med.time}'),
                   subtitle: Text('Days: ${med.days.join(", ")}'),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.edit),
-                    tooltip: 'Edit Medication',
-                    onPressed: () => _addOrEditMedication(existingMed: med),
-                  ),
+                  trailing: Row( // Use a Row to hold multiple buttons in caregiver view
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // EDIT BUTTON
+                        IconButton(
+                          icon: const Icon(Icons.edit),
+                          onPressed: () => _addOrEditMedication(existingMed: med),
+                        ),
+                        // DELETE BUTTON (NEW)
+                        IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () => _deleteMedication(med),
+                        ),
+                      ],
+                    ),
                   onTap: () => _addOrEditMedication(existingMed: med),
                 );
               },
