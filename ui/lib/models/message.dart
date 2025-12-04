@@ -15,19 +15,41 @@ class Message {
 
   // Factory constructor to create a Message object from the JSON map received from the API.
   factory Message.fromJson(Map<String, dynamic> json) {
-    // We use null-safe access (json['key'] as String?) and provide sensible default values 
-    // using ?? 'default' to prevent 'Null is not a subtype of String' errors during parsing.
+    
+    // Helper to safely extract string data, returning null if missing or if the value is 'null' string
+    String? _extractString(String key) {
+      final value = json[key] as String?;
+      return (value != null && value.isNotEmpty && value != 'null') ? value.trim() : null;
+    }
+
+    // --- Sender ID Extraction (Prioritize Flask Model Keys) ---
+    // The Flask model uses 'sender_id'. We prioritize this snake_case key.
+    String extractedSenderId = _extractString('sender_id') ?? 
+                               _extractString('senderId') ?? 
+                               'missing-id'; // Use a final fallback
+    // -------------------------------------------------------------
+    
+    // --- Medication ID Extraction (Prioritize Flask Model Keys) ---
+    // The Flask model uses 'medication_id'.
+    String extractedMedicationId = _extractString('medication_id') ?? 
+                                   _extractString('medicationId') ?? 
+                                   'unknown-med';
+
     return Message(
-      // The API should provide an ID, but we handle the case where it might be missing.
-      id: json['id'] as String? ?? 'missing-id', 
+      // The Flask model uses 'id'
+      id: _extractString('id') ?? 'unknown-id',
       
-      // These are required fields from the server but are defensively handled here.
-      medicationId: json['medicationId'] as String? ?? '',
-      senderId: json['senderId'] as String? ?? '',
-      content: json['content'] as String? ?? 'No content',
+      medicationId: extractedMedicationId,
       
+      // Use the deterministically extracted sender ID
+      senderId: extractedSenderId, 
+      
+      // The Flask model uses 'content'
+      content: _extractString('content') ?? _extractString('text') ?? 'No Content',
+      
+      // The Flask model uses 'timestamp'
       // Parse ISO 8601 string into a DateTime object.
-      // If the timestamp is null or invalid, we default to the current time.
+      // We expect the 'Z' (Zulu time) suffix from the Flask model's isoformat() + 'Z'
       timestamp: json['timestamp'] != null 
           ? DateTime.parse(json['timestamp'] as String) 
           : DateTime.now(), 

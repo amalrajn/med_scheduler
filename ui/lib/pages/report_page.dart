@@ -48,6 +48,14 @@ class _ChatPageState extends State<ChatPage> {
       
       setState(() => _messages = fetchedMessages);
       _scrollToBottom();
+
+      if (_messages.isNotEmpty) {
+        debugPrint('--- Chat Alignment Debug ---');
+        debugPrint('Current widget.userId: ${widget.userId}');
+        debugPrint('First message senderId: ${_messages.first.senderId}');
+        debugPrint('Are they the same? ${_messages.first.senderId == widget.userId}');
+        debugPrint('----------------------------');
+      }
     } catch (e) {
       debugPrint('Error loading chat: $e');
     } finally {

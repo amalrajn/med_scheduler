@@ -172,6 +172,7 @@ def get_chat_history(medication_id):
     """Fetches all messages for a specific medication, ordered chronologically."""
     # Query messages for the medication ID and order them by timestamp ascending (oldest first)
     messages = Message.query.filter_by(medication_id=medication_id).order_by(asc(Message.timestamp)).all()
+    print([m.to_dict()['sender_id'] for m in messages])
 
     # We return the list of message dictionaries
     return jsonify([m.to_dict() for m in messages]), 200
@@ -183,6 +184,7 @@ def send_chat_message(medication_id):
     data = request.get_json()
     sender_id = data.get("sender_id")
     content = data.get("content")
+    print(sender_id)
 
     # Basic validation
     if not sender_id or not content:
