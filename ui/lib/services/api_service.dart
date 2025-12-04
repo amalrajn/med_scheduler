@@ -117,4 +117,23 @@ class ApiService {
       throw Exception('Signup failed: ${res.body}');
     }
   }
+
+  // ---------------- Chat Reporting ----------------
+
+  Future<void> sendReport(String userId, String medicationId, String message) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/reports/$userId'), // Use a dedicated reports endpoint
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({
+        'medication_id': medicationId,
+        'message': message,
+        // You might also want to send a timestamp or status
+      }),
+    );
+
+    // Assuming Flask returns 201 Created on success
+    if (res.statusCode != 201) {
+      throw Exception('Failed to send report');
+    }
+  }
 }

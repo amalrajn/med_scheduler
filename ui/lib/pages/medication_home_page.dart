@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../models/medication.dart';
 import 'add_medication_page.dart';
+// Import the ReportPage
+import 'report_page.dart'; // ASSUMING you have created this file
 
 class MedicationHomePage extends StatefulWidget {
   final String userId;
@@ -44,29 +46,61 @@ class _MedicationHomePageState extends State<MedicationHomePage> {
     }
   }
 
+  // --- NEW REPORT FUNCTION ---
+  void _reportIssue(Medication med) async {
+    // Navigate to the ReportPage, passing the user and medication details
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ReportPage(
+          userId: widget.userId,
+          medication: med,
+        ),
+      ),
+    );
+    // No need to reload meds here, but you can if you want a fresh list after reporting
+  }
+  // ---------------------------
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("My Medications")),
+      appBar: AppBar(title: const Text("My Medications")),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : ListView.builder(
-              itemCount: meds.length,
-              itemBuilder: (context, index) {
-                final med = meds[index];
-                return Card(
-                  margin: const EdgeInsets.all(8),
-                  child: ListTile(
-                  title: Text('${med.name} - ${med.amount} ${med.unit} at ${med.time}'),
-                  subtitle: Text('Days: ${med.days.join(", ")}'),
-                  trailing: ElevatedButton(
-                      onPressed: med.taken ? null : () => _markTaken(med),
-                      child: Text(med.taken ? "✅ Taken" : "Done"),
-                    ),
-                  ),
-                );
-              },
-            ),
+          : meds.isEmpty
+              ? const Center(child: Text('No medications scheduled.'))
+              : ListView.builder(
+                  itemCount: meds.length,
+                  itemBuilder: (context, index) {
+                    final med = meds[index];
+                    return Card(
+                      margin: const EdgeInsets.all(8),
+                      child: ListTile(
+                        title: Text('${med.name} - ${med.amount} ${med.unit} at ${med.time}'),
+                        subtitle: Text('Days: ${med.days.join(", ")}'),
+                        trailing: Row( // <-- CHANGED: Use Row to put two buttons side-by-side
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // CHAT BUTTON
+                              IconButton(
+                                icon: const Icon(Icons.chat_bubble_outline, color: Colors.blue),
+                                tooltip: 'Chat about ${med.name}',
+                                onPressed: () => _reportIssue(med),
+                              ),
+                            const SizedBox(width: 8),
+
+                            // 2. EXISTING MARK TAKEN BUTTON
+                            ElevatedButton(
+                              onPressed: med.taken ? null : () => _markTaken(med),
+                              child: Text(med.taken ? "Taken ✅" : "Take 💊"),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
     );
   }
 }

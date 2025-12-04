@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../models/medication.dart';
 import 'add_medication_page.dart';
+import 'report_page.dart';
 
 class UserMedicationListPage extends StatefulWidget {
   final String selectedUserId;
@@ -98,6 +99,20 @@ class _UserMedicationListPageState extends State<UserMedicationListPage> {
     }
   }
 
+  void _startChat(Medication med) async {
+    // Navigate to the chat/report page, passing the patient's userId and medication.
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ReportPage( // Reusing ReportPage for the chat interface
+          userId: widget.selectedUserId,
+          medication: med,
+        ),
+      ),
+    );
+    // Optionally, you could reload the medication list or pending reports here.
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -114,6 +129,12 @@ class _UserMedicationListPageState extends State<UserMedicationListPage> {
                   trailing: Row( // Use a Row to hold multiple buttons in caregiver view
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        // CHAT BUTTON
+                        IconButton(
+                          icon: const Icon(Icons.chat_bubble_outline, color: Colors.blue),
+                          tooltip: 'Chat about ${med.name}',
+                          onPressed: () => _startChat(med),
+                        ),
                         // EDIT BUTTON
                         IconButton(
                           icon: const Icon(Icons.edit),
