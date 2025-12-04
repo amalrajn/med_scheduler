@@ -48,17 +48,17 @@ class _MedicationHomePageState extends State<MedicationHomePage> {
 
   // --- NEW REPORT FUNCTION ---
   void _reportIssue(Medication med) async {
-    // Navigate to the ReportPage, passing the user and medication details
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => ReportPage(
+        // Patient is not a caregiver (default is false)
+        builder: (_) => ChatPage( 
           userId: widget.userId,
           medication: med,
+          isCaregiver: false, // Explicitly set patient role
         ),
       ),
     );
-    // No need to reload meds here, but you can if you want a fresh list after reporting
   }
   // ---------------------------
 

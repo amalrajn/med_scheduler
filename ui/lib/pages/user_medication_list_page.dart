@@ -100,17 +100,16 @@ class _UserMedicationListPageState extends State<UserMedicationListPage> {
   }
 
   void _startChat(Medication med) async {
-    // Navigate to the chat/report page, passing the patient's userId and medication.
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => ReportPage( // Reusing ReportPage for the chat interface
-          userId: widget.selectedUserId,
+        builder: (_) => ChatPage(
+          userId: widget.caregiverId, // The caregiver is the current user/sender
           medication: med,
+          isCaregiver: true, // Explicitly set caregiver role
         ),
       ),
     );
-    // Optionally, you could reload the medication list or pending reports here.
   }
 
   @override

@@ -1,7 +1,9 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from models import db, User, Medication
+from models import db, User, Medication, Message
+from datetime import datetime # Added for the new Message endpoint
 import json
+from sqlalchemy import asc
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///med_scheduler.db'
@@ -162,6 +164,50 @@ def mark_med_taken(user_id, med_id):
     med.taken = True
     db.session.commit()
     return jsonify(med.to_dict()), 200
+
+# ----------------- Chat APIs -----------------
+
+@app.route("/chats/<medication_id>", methods=["GET"])
+def get_chat_history(medication_id):
+    """Fetches all messages for a specific medication, ordered chronologically."""
+    # Query messages for the medication ID and order them by timestamp ascending (oldest first)
+    messages = Message.query.filter_by(medication_id=medication_id).order_by(asc(Message.timestamp)).all()
+
+    # We return the list of message dictionaries
+    return jsonify([m.to_dict() for m in messages]), 200
+
+
+@app.route("/chats/<medication_id>", methods=["POST"])
+def send_chat_message(medication_id):
+    """Allows patient or caregiver to send a new message related to a medication."""
+    data = request.get_json()
+    sender_id = data.get("sender_id")
+    content = data.get("content")
+
+    # Basic validation
+    if not sender_id or not content:
+        return jsonify({"error": "Missing sender_id or content"}), 400
+
+    # Ensure medication exists
+    if not Medication.query.get(medication_id):
+        return jsonify({"error": "Medication not found"}), 404
+
+    try:
+        # Create and save the new message
+        message = Message(
+            medication_id=medication_id,
+            sender_id=sender_id,
+            content=content,
+            timestamp=datetime.utcnow() # Flask handles the timestamp on creation
+        )
+        db.session.add(message)
+        db.session.commit()
+        # Return the newly created message dictionary
+        return jsonify(message.to_dict()), 201
+
+    except Exception as e:
+        print(f"Database error on sending message: {e}")
+        return jsonify({"error": "Failed to save message to database"}), 500
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=8000)

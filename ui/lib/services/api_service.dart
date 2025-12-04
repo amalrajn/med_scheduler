@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/user.dart';
 import '../models/medication.dart';
+import '../models/message.dart';
 
 class ApiService {
   final String baseUrl = 'http://localhost:8000'; // Adjust if needed
@@ -134,6 +135,32 @@ class ApiService {
     // Assuming Flask returns 201 Created on success
     if (res.statusCode != 201) {
       throw Exception('Failed to send report');
+    }
+  }
+
+  Future<List<Message>> fetchChatHistory(String medicationId) async {
+    // NOTE: Assuming Message model exists and Flask returns a list of messages
+    final res = await http.get(Uri.parse('$baseUrl/chats/$medicationId'));
+    if (res.statusCode == 200) {
+      final List<dynamic> data = json.decode(res.body);
+      return data.map((e) => Message.fromJson(e)).toList(); // Convert to Message objects
+    } else {
+      // FIX: Include the status code in the exception for better debugging
+      throw Exception('Failed to fetch chat history (Status: ${res.statusCode})');
+    }
+  }
+
+  Future<void> sendMessage(String medicationId, String senderId, String content) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/chats/$medicationId'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({
+        'sender_id': senderId,
+        'content': content,
+      }),
+    );
+    if (res.statusCode != 201) {
+      throw Exception('Failed to send message');
     }
   }
 }
